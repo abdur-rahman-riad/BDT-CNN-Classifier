@@ -75,7 +75,7 @@ st.markdown(
 def load_bdt_model():
     return load_model("bdt_cnn_model.h5")
 
-interpreter = load_model()()
+interpreter = load_model()
 
 if interpreter is not None:
     input_details = interpreter.get_input_details()
