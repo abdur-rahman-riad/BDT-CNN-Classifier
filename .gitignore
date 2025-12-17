@@ -6,6 +6,10 @@ __pycache__/
 venv/
 .venv/
 
+BDT_v1/
+
+bdt_cnn_model.h5
+
 # Environment variables
 .env
 
