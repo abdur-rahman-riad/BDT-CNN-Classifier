@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 
 # --------------------------------------------------
 # Page config
@@ -71,20 +71,26 @@ st.markdown(
 # Load TFLite model
 # --------------------------------------------------
 @st.cache_resource
-def load_tflite_model():
+def load_model():
     try:
-        interpreter = tf.lite.Interpreter(model_path="bdt_cnn_model.tflite")
+        interpreter = tflite.Interpreter(
+            model_path="bdt_cnn_model.tflite"
+        )
         interpreter.allocate_tensors()
         return interpreter
     except Exception as e:
-        st.error(f"⚠️ Model file not found or failed to load: {e}")
+        st.error(f"❌ Model load failed: {e}")
         return None
 
-interpreter = load_tflite_model()
+interpreter = load_model()()
 
-if interpreter:
+if interpreter is not None:
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
+
+    interpreter.set_tensor(input_details[0]['index'], input_data)
+    interpreter.invoke()
+    prediction = interpreter.get_tensor(output_details[0]['index'])
 
 # --------------------------------------------------
 # Class labels

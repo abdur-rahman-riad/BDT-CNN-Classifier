@@ -1,5 +1,5 @@
-streamlit>=1.33.0
-tensorflow==2.20.0
-numpy
+streamlit>=1.32.0
+numpy<2
 pillow
 opencv-python-headless
+tflite-runtime
