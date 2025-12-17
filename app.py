@@ -159,7 +159,7 @@ if uploaded_file and interpreter:
 
         predicted_idx = np.argmax(predictions)
         predicted_class = class_labels[predicted_idx]
-        confidence = predictions[predicted_idx] * 100
+        confidence = float(predictions[predicted_idx]) * 100
 
         st.markdown(
             f'<div class="prediction-box">{predicted_class.replace("_BDT", "")} Taka</div>',
@@ -177,7 +177,7 @@ if uploaded_file and interpreter:
     st.markdown("### All Class Probabilities")
 
     for label in ["1000_BDT", "500_BDT", "200_BDT", "100_BDT"]:
-        prob = predictions[class_labels.index(label)] * 100
+        prob = float(predictions[class_labels.index(label)]) * 100
         st.write(f"**{label.replace('_BDT','')} Taka** — `{prob:.1f}%`")
         st.progress(prob / 100)
 
