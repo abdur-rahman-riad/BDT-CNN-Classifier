@@ -1,8 +1,7 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import tflite_runtime.interpreter as tflite
-from tensorflow.keras.models import load_model
+import tensorflow as tf
 
 # --------------------------------------------------
 # Page config
@@ -14,7 +13,7 @@ st.set_page_config(
 )
 
 # --------------------------------------------------
-# Custom CSS (FIXED visibility + white cards)
+# Custom CSS
 # --------------------------------------------------
 st.markdown("""
 <style>
@@ -72,18 +71,17 @@ st.markdown(
 # Load TFLite model
 # --------------------------------------------------
 @st.cache_resource
-def load_bdt_model():
-    return load_model("bdt_cnn_model.h5")
+def load_tflite_model():
+    """Load TensorFlow Lite model"""
+    try:
+        interpreter = tf.lite.Interpreter(model_path="bdt_cnn_model.tflite")
+        interpreter.allocate_tensors()
+        return interpreter
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
 
-interpreter = load_model()
-
-if interpreter is not None:
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-
-    interpreter.set_tensor(input_details[0]['index'], input_data)
-    interpreter.invoke()
-    prediction = interpreter.get_tensor(output_details[0]['index'])
+interpreter = load_tflite_model()
 
 # --------------------------------------------------
 # Class labels
@@ -94,6 +92,7 @@ class_labels = ["1000_BDT", "100_BDT", "200_BDT", "500_BDT"]
 # Image preprocessing
 # --------------------------------------------------
 def preprocess_image(image):
+    """Preprocess image for model input"""
     if image.mode != "RGB":
         image = image.convert("RGB")
 
@@ -101,6 +100,24 @@ def preprocess_image(image):
     img_array = np.array(img, dtype=np.float32) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
     return img_array
+
+# --------------------------------------------------
+# Prediction function
+# --------------------------------------------------
+def predict_banknote(image, interpreter):
+    """Run prediction on image"""
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    
+    # Preprocess image
+    input_data = preprocess_image(image)
+    
+    # Run inference
+    interpreter.set_tensor(input_details[0]["index"], input_data)
+    interpreter.invoke()
+    predictions = interpreter.get_tensor(output_details[0]["index"])[0]
+    
+    return predictions
 
 # --------------------------------------------------
 # Upload section
@@ -138,10 +155,7 @@ if uploaded_file and interpreter:
         st.markdown('<div class="section-title">📊 Prediction</div>', unsafe_allow_html=True)
 
         with st.spinner("Analyzing banknote..."):
-            input_data = preprocess_image(image)
-            interpreter.set_tensor(input_details[0]["index"], input_data)
-            interpreter.invoke()
-            predictions = interpreter.get_tensor(output_details[0]["index"])[0]
+            predictions = predict_banknote(image, interpreter)
 
         predicted_idx = np.argmax(predictions)
         predicted_class = class_labels[predicted_idx]

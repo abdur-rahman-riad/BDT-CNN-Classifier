@@ -3,4 +3,3 @@ tensorflow>=2.20.0
 numpy<2
 pillow
 opencv-python-headless
-
