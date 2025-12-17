@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import tflite_runtime.interpreter as tflite
+from tensorflow.keras.models import load_model
 
 # --------------------------------------------------
 # Page config
@@ -71,16 +72,8 @@ st.markdown(
 # Load TFLite model
 # --------------------------------------------------
 @st.cache_resource
-def load_model():
-    try:
-        interpreter = tflite.Interpreter(
-            model_path="bdt_cnn_model.tflite"
-        )
-        interpreter.allocate_tensors()
-        return interpreter
-    except Exception as e:
-        st.error(f"❌ Model load failed: {e}")
-        return None
+def load_bdt_model():
+    return load_model("bdt_cnn_model.h5")
 
 interpreter = load_model()()
 
