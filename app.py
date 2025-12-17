@@ -2,146 +2,184 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import tensorflow as tf
-from tensorflow.keras.models import load_model
 
+# --------------------------------------------------
 # Page config
-st.set_page_config(page_title="BDT Banknote Classifier - CNN", page_icon="৳", layout="centered")
+# --------------------------------------------------
+st.set_page_config(
+    page_title="BDT Banknote Classifier - CNN",
+    page_icon="৳",
+    layout="centered"
+)
 
-# Custom CSS to match the design
+# --------------------------------------------------
+# Custom CSS (FIXED visibility + white cards)
+# --------------------------------------------------
 st.markdown("""
 <style>
+    body {
+        background-color: #0e1117;
+    }
+
     .main-title {
         text-align: center;
         font-size: 2rem;
         font-weight: 600;
         margin-bottom: 1.5rem;
-        color: #FFFFFF;
+        color: #ffffff;
     }
+
+    .card {
+        background-color: #ffffff;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        margin-bottom: 1rem;
+    }
+
     .prediction-box {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 600;
-        color: #008000;
-        padding: 1rem;
-        background-color: #f1f8f4;
-        border-radius: 8px;
+        color: #000000;
         text-align: center;
-        margin: 0 0 1.5rem 0;
+        margin-bottom: 0.5rem;
     }
+
     .confidence-box {
-        font-size: 1.3rem;
-        color: #000080;
+        font-size: 1.2rem;
+        color: #000000;
         text-align: center;
-        margin: 0.5rem 0 1.5rem 0;
-        padding: 1rem;
-        background-color: #f1f8f4;
-        border-radius: 8px;
+    }
+
+    .section-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #000000;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# --------------------------------------------------
 # Title
-st.markdown('<div class="main-title">৳ BDT Banknote Classifier - CNN ৳</div>', unsafe_allow_html=True)
+# --------------------------------------------------
+st.markdown(
+    '<div class="main-title">৳ BDT Banknote Classifier - CNN ৳</div>',
+    unsafe_allow_html=True
+)
 
-# Load model
+# --------------------------------------------------
+# Load TFLite model
+# --------------------------------------------------
 @st.cache_resource
-def load_bdt_model():
+def load_tflite_model():
     try:
-        model = load_model('bdt_cnn_model.h5')
-        return model
+        interpreter = tf.lite.Interpreter(model_path="bdt_cnn_model.tflite")
+        interpreter.allocate_tensors()
+        return interpreter
     except Exception as e:
-        st.error(f"⚠️ Model file 'bdt_cnn_model.h5' not found! Error: {str(e)}")
+        st.error(f"⚠️ Model file not found or failed to load: {e}")
         return None
 
-model = load_bdt_model()
+interpreter = load_tflite_model()
 
+if interpreter:
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+
+# --------------------------------------------------
 # Class labels
-class_labels = ['1000_BDT', '100_BDT', '200_BDT', '500_BDT']
+# --------------------------------------------------
+class_labels = ["1000_BDT", "100_BDT", "200_BDT", "500_BDT"]
 
+# --------------------------------------------------
+# Image preprocessing
+# --------------------------------------------------
 def preprocess_image(image):
-    """Preprocess image for CNN model"""
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
-    
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+
     img = image.resize((224, 224))
-    img_array = np.array(img) / 255.0
+    img_array = np.array(img, dtype=np.float32) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
-    
     return img_array
 
-# Main layout
-st.markdown("---")
-
-# Upload Section
+# --------------------------------------------------
+# Upload section
+# --------------------------------------------------
 st.markdown("### Upload BDT Banknote")
-st.markdown("*Ex: 100, 200, 500 or 1000 BDT*")
+st.markdown("*Supported: 100, 200, 500, 1000 BDT*")
 
 uploaded_file = st.file_uploader(
-    "Drag and drop file here",
-    type=['jpg', 'jpeg', 'png'],
+    "Upload Image",
+    type=["jpg", "jpeg", "png"],
     label_visibility="collapsed"
 )
 
 st.markdown("---")
 
-# Results Section
-if uploaded_file is not None and model is not None:
-    col1, col2 = st.columns([1, 1])
-    
+# --------------------------------------------------
+# Results section
+# --------------------------------------------------
+if uploaded_file and interpreter:
+    col1, col2 = st.columns(2)
+
+    # ---------- LEFT: IMAGE ----------
     with col1:
-        st.markdown("### 📷 Uploaded Banknote")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">📷 Uploaded Banknote</div>', unsafe_allow_html=True)
+
         image = Image.open(uploaded_file)
         st.image(image, use_container_width=True)
-    
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ---------- RIGHT: RESULTS ----------
     with col2:
-        st.markdown("### 📊 Results")
-        
-        # Make prediction
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">📊 Prediction</div>', unsafe_allow_html=True)
+
         with st.spinner("Analyzing banknote..."):
-            processed_img = preprocess_image(image)
-            predictions = model.predict(processed_img, verbose=0)[0]
-        
-        # Get prediction and confidence
+            input_data = preprocess_image(image)
+            interpreter.set_tensor(input_details[0]["index"], input_data)
+            interpreter.invoke()
+            predictions = interpreter.get_tensor(output_details[0]["index"])[0]
+
         predicted_idx = np.argmax(predictions)
         predicted_class = class_labels[predicted_idx]
         confidence = predictions[predicted_idx] * 100
-        
-        # Display prediction
-        st.markdown(f'<div class="prediction-box">Prediction: <br>{predicted_class.replace("_BDT", "")} Taka</div>', 
-                   unsafe_allow_html=True)
-        
-        st.markdown(f'<div class="confidence-box">Confidence: {confidence:.0f}%</div>', 
-                   unsafe_allow_html=True)
 
+        st.markdown(
+            f'<div class="prediction-box">{predicted_class.replace("_BDT", "")} Taka</div>',
+            unsafe_allow_html=True
+        )
 
-     # All Class Probabilities
-        st.markdown("#### All Class Probabilities")
-        
-        prob_data = {
-            "Denomination": ["1000 Taka", "500 Taka", "200 Taka", "100 Taka"],
-            "Probability": [
-                f"{predictions[class_labels.index('1000_BDT')]*100:.1f}%",
-                f"{predictions[class_labels.index('500_BDT')]*100:.1f}%",
-                f"{predictions[class_labels.index('200_BDT')]*100:.1f}%",
-                f"{predictions[class_labels.index('100_BDT')]*100:.1f}%"
-            ]
-        }
-        
-        # Create table
-        for denom, prob in zip(prob_data["Denomination"], prob_data["Probability"]):
-            col_a, col_b = st.columns([2, 1])
-            with col_a:
-                st.write(f"**{denom}**")
-            with col_b:
-                st.write(f"`{prob}`")
-            st.progress(float(prob.strip('%'))/100)
-        
-        # Confidence warning
-        if confidence < 80:
-            st.warning("⚠️ **Low Confidence Warning**\n\nThe model is uncertain about this prediction. Consider:\n- Better lighting\n- Clearer image\n- Flat, unfolded note")
-        else:
-            st.success("✅ **High Confidence - Prediction is reliable**")
+        st.markdown(
+            f'<div class="confidence-box">Confidence: {confidence:.1f}%</div>',
+            unsafe_allow_html=True
+        )
 
-elif model is None:
-    st.error("❌ Cannot make predictions without the model file. Please ensure 'bdt_cnn_model.h5' is in the same directory.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ---------- PROBABILITIES ----------
+    st.markdown("### All Class Probabilities")
+
+    for label in ["1000_BDT", "500_BDT", "200_BDT", "100_BDT"]:
+        prob = predictions[class_labels.index(label)] * 100
+        st.write(f"**{label.replace('_BDT','')} Taka** — `{prob:.1f}%`")
+        st.progress(prob / 100)
+
+    # ---------- CONFIDENCE MESSAGE ----------
+    if confidence < 80:
+        st.warning(
+            "⚠️ **Low Confidence**\n\n"
+            "- Ensure good lighting\n"
+            "- Use a flat, unfolded note\n"
+            "- Avoid blur"
+        )
+    else:
+        st.success("✅ **High Confidence – Prediction is reliable**")
+
+elif not interpreter:
+    st.error("❌ Model not loaded. Ensure `bdt_cnn_model.tflite` exists in repository.")
 else:
-    st.info("👆 Please upload a banknote image to classify")       
+    st.info("👆 Please upload a banknote image to classify")
