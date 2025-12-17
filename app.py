@@ -29,32 +29,31 @@ st.markdown("""
         color: #ffffff;
     }
 
-    .card {
-        background-color: #ffffff;
-        padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-        margin-bottom: 1rem;
-    }
-
     .prediction-box {
-        font-size: 1.4rem;
+        font-size: 2rem;
         font-weight: 600;
-        color: #000000;
+        color: #DC143C;
+        padding: 15px;
         text-align: center;
         margin-bottom: 0.5rem;
+        background-color: #FFFFFF;
+        border-radius: 4px;
     }
 
     .confidence-box {
-        font-size: 1.2rem;
-        color: #000000;
+        font-size: 1.5rem;
+        color: #000080;
         text-align: center;
+        background-color: #FFFFFF;
+        padding: 10px;
+        border-radius: 4px;
     }
 
     .section-title {
         font-weight: 600;
         margin-bottom: 0.5rem;
-        color: #000000;
+        color: #FFFFFF;
+        padding: 5px;
     }
 </style>
 """, unsafe_allow_html=True)
